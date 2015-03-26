@@ -1,0 +1,372 @@
+" Vim syntax file
+" Language:		Gary
+" Maintainer:		Brett Cassette <brettcassette@gmail.com>
+" URL:			https://github.com/vim-gary/vim-gary
+" Release Coordinator:	Brett Cassette <brettcassette@gmail.com>
+" ----------------------------------------------------------------------------
+
+if exists("b:current_syntax")
+  finish
+endif
+
+if has("folding") && exists("gary_fold")
+  setlocal foldmethod=syntax
+endif
+
+syn cluster garyNotTop contains=@garyExtendedStringSpecial,@garyRegexpSpecial,@garyDeclaration,garyConditional,garyExceptional,garyMethodExceptional,garyTodo
+
+if exists("gary_space_errors")
+  if !exists("gary_no_trail_space_error")
+    syn match garySpaceError display excludenl "\s\+$"
+  endif
+  if !exists("gary_no_tab_space_error")
+    syn match garySpaceError display " \+\t"me=e-1
+  endif
+endif
+
+" Operators
+if exists("gary_operators")
+  syn match  garyOperator "[~!^&|*/%+-]\|\%(class\s*\)\@<!<<\|<=>\|<=\|\%(<\|\<class\s\+\u\w*\s*\)\@<!<[^<]\@=\|===\|==\|=\~\|>>\|>=\|=\@<!>\|\*\*\|\.\.\.\|\.\.\|::"
+  syn match  garyOperator "->\|-=\|/=\|\*\*=\|\*=\|&&=\|&=\|&&\|||=\||=\|||\|%=\|+=\|!\~\|!="
+  syn region garyBracketOperator matchgroup=garyOperator start="\%(\w[?!]\=\|[]})]\)\@<=\[\s*" end="\s*]" contains=ALLBUT,@garyNotTop
+endif
+
+" Expression Substitution and Backslash Notation
+syn match garyStringEscape "\\\\\|\\[abefnrstv]\|\\\o\{1,3}\|\\x\x\{1,2}"						    contained display
+syn match garyStringEscape "\%(\\M-\\C-\|\\C-\\M-\|\\M-\\c\|\\c\\M-\|\\c\|\\C-\|\\M-\)\%(\\\o\{1,3}\|\\x\x\{1,2}\|\\\=\S\)" contained display
+syn match garyQuoteEscape  "\\[\\']"											    contained display
+
+syn region garyInterpolation	      matchgroup=garyInterpolationDelimiter start="#{" end="}" contained contains=ALLBUT,@garyNotTop
+syn match  garyInterpolation	      "#\%(\$\|@@\=\)\w\+"    display contained contains=garyInterpolationDelimiter,garyInstanceVariable,garyClassVariable,garyGlobalVariable,garyPredefinedVariable
+syn match  garyInterpolationDelimiter "#\ze\%(\$\|@@\=\)\w\+" display contained
+syn match  garyInterpolation	      "#\$\%(-\w\|\W\)"       display contained contains=garyInterpolationDelimiter,garyPredefinedVariable,garyInvalidVariable
+syn match  garyInterpolationDelimiter "#\ze\$\%(-\w\|\W\)"    display contained
+syn region garyNoInterpolation	      start="\\#{" end="}"            contained
+syn match  garyNoInterpolation	      "\\#{"		      display contained
+syn match  garyNoInterpolation	      "\\#\%(\$\|@@\=\)\w\+"  display contained
+syn match  garyNoInterpolation	      "\\#\$\W"		      display contained
+
+syn match garyDelimEscape	"\\[(<{\[)>}\]]" transparent display contained contains=NONE
+
+syn region garyNestedParentheses    start="("  skip="\\\\\|\\)"  matchgroup=garyString end=")"	transparent contained
+syn region garyNestedCurlyBraces    start="{"  skip="\\\\\|\\}"  matchgroup=garyString end="}"	transparent contained
+syn region garyNestedAngleBrackets  start="<"  skip="\\\\\|\\>"  matchgroup=garyString end=">"	transparent contained
+syn region garyNestedSquareBrackets start="\[" skip="\\\\\|\\\]" matchgroup=garyString end="\]"	transparent contained
+
+" These are mostly Oniguruma ready
+syn region garyRegexpComment	matchgroup=garyRegexpSpecial   start="(?#"								  skip="\\)"  end=")"  contained
+syn region garyRegexpParens	matchgroup=garyRegexpSpecial   start="(\(?:\|?<\=[=!]\|?>\|?<[a-z_]\w*>\|?[imx]*-[imx]*:\=\|\%(?#\)\@!\)" skip="\\)"  end=")"  contained transparent contains=@garyRegexpSpecial
+syn region garyRegexpBrackets	matchgroup=garyRegexpCharClass start="\[\^\="								  skip="\\\]" end="\]" contained transparent contains=garyStringEscape,garyRegexpEscape,garyRegexpCharClass oneline
+syn match  garyRegexpCharClass	"\\[DdHhSsWw]"	       contained display
+syn match  garyRegexpCharClass	"\[:\^\=\%(alnum\|alpha\|ascii\|blank\|cntrl\|digit\|graph\|lower\|print\|punct\|space\|upper\|xdigit\):\]" contained
+syn match  garyRegexpEscape	"\\[].*?+^$|\\/(){}[]" contained
+syn match  garyRegexpQuantifier	"[*?+][?+]\="	       contained display
+syn match  garyRegexpQuantifier	"{\d\+\%(,\d*\)\=}?\=" contained display
+syn match  garyRegexpAnchor	"[$^]\|\\[ABbGZz]"     contained display
+syn match  garyRegexpDot	"\."		       contained display
+syn match  garyRegexpSpecial	"|"		       contained display
+syn match  garyRegexpSpecial	"\\[1-9]\d\=\d\@!"     contained display
+syn match  garyRegexpSpecial	"\\k<\%([a-z_]\w*\|-\=\d\+\)\%([+-]\d\+\)\=>" contained display
+syn match  garyRegexpSpecial	"\\k'\%([a-z_]\w*\|-\=\d\+\)\%([+-]\d\+\)\='" contained display
+syn match  garyRegexpSpecial	"\\g<\%([a-z_]\w*\|-\=\d\+\)>" contained display
+syn match  garyRegexpSpecial	"\\g'\%([a-z_]\w*\|-\=\d\+\)'" contained display
+
+syn cluster garyStringSpecial	      contains=garyInterpolation,garyNoInterpolation,garyStringEscape
+syn cluster garyExtendedStringSpecial contains=@garyStringSpecial,garyNestedParentheses,garyNestedCurlyBraces,garyNestedAngleBrackets,garyNestedSquareBrackets
+syn cluster garyRegexpSpecial	      contains=garyInterpolation,garyNoInterpolation,garyStringEscape,garyRegexpSpecial,garyRegexpEscape,garyRegexpBrackets,garyRegexpCharClass,garyRegexpDot,garyRegexpQuantifier,garyRegexpAnchor,garyRegexpParens,garyRegexpComment
+
+" Numbers and ASCII Codes
+syn match garyASCIICode	"\%(\w\|[]})\"'/]\)\@<!\%(?\%(\\M-\\C-\|\\C-\\M-\|\\M-\\c\|\\c\\M-\|\\c\|\\C-\|\\M-\)\=\%(\\\o\{1,3}\|\\x\x\{1,2}\|\\\=\S\)\)"
+syn match garyInteger	"\%(\%(\w\|[]})\"']\s*\)\@<!-\)\=\<0[xX]\x\+\%(_\x\+\)*\>"								display
+syn match garyInteger	"\%(\%(\w\|[]})\"']\s*\)\@<!-\)\=\<\%(0[dD]\)\=\%(0\|[1-9]\d*\%(_\d\+\)*\)\>"						display
+syn match garyInteger	"\%(\%(\w\|[]})\"']\s*\)\@<!-\)\=\<0[oO]\=\o\+\%(_\o\+\)*\>"								display
+syn match garyInteger	"\%(\%(\w\|[]})\"']\s*\)\@<!-\)\=\<0[bB][01]\+\%(_[01]\+\)*\>"								display
+syn match garyFloat	"\%(\%(\w\|[]})\"']\s*\)\@<!-\)\=\<\%(0\|[1-9]\d*\%(_\d\+\)*\)\.\d\+\%(_\d\+\)*\>"					display
+syn match garyFloat	"\%(\%(\w\|[]})\"']\s*\)\@<!-\)\=\<\%(0\|[1-9]\d*\%(_\d\+\)*\)\%(\.\d\+\%(_\d\+\)*\)\=\%([eE][-+]\=\d\+\%(_\d\+\)*\)\>"	display
+
+" Identifiers
+syn match garyLocalVariableOrMethod "\<[_[:lower:]][_[:alnum:]]*[?!=]\=" contains=NONE display transparent
+syn match garyBlockArgument	    "&[_[:lower:]][_[:alnum:]]"		 contains=NONE display transparent
+
+syn match  garyConstant		"\%(\%(^\|[^.]\)\.\s*\)\@<!\<\u\%(\w\|[^\x00-\x7F]\)*\>\%(\s*(\)\@!"
+syn match  garyClassVariable	"@@\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*" display
+syn match  garyInstanceVariable "@\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*"  display
+syn match  garyGlobalVariable	"$\%(\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*\|-.\)"
+syn match  garySymbol		"[]})\"':]\@<!:\%(\^\|\~\|<<\|<=>\|<=\|<\|===\|[=!]=\|[=!]\~\|!\|>>\|>=\|>\||\|-@\|-\|/\|\[]=\|\[]\|\*\*\|\*\|&\|%\|+@\|+\|`\)"
+syn match  garySymbol		"[]})\"':]\@<!:\$\%(-.\|[`~<=>_,;:!?/.'"@$*\&+0]\)"
+syn match  garySymbol		"[]})\"':]\@<!:\%(\$\|@@\=\)\=\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*"
+syn match  garySymbol		"[]})\"':]\@<!:\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*\%([?!=]>\@!\)\="
+syn region garySymbol		start="[]})\"':]\@<!:'"  end="'"  skip="\\\\\|\\'"  contains=garyQuoteEscape fold
+syn region garySymbol		start="[]})\"':]\@<!:\"" end="\"" skip="\\\\\|\\\"" contains=@garyStringSpecial fold
+
+syn match  garyCapitalizedMethod	"\%(\%(^\|[^.]\)\.\s*\)\@<!\<\u\%(\w\|[^\x00-\x7F]\)*\>\%(\s*(\)*\s*(\@="
+
+syn match  garyBlockParameter	  "\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*" contained
+syn region garyBlockParameterList start="\%(\%(\<what2do\>\|{\)\s*\)\@<=|" end="|" oneline display contains=garyBlockParameter
+
+syn match garyInvalidVariable	 "$[^ A-Za-z_-]"
+syn match garyPredefinedVariable #$[!$&"'*+,./0:;<=>?@\`~]#
+syn match garyPredefinedVariable "$\d\+"										   display
+syn match garyPredefinedVariable "$_\>"											   display
+syn match garyPredefinedVariable "$-[0FIKadilpvw]\>"									   display
+syn match garyPredefinedVariable "$\%(deferr\|defout\|stderr\|stdin\|stdout\)\>"					   display
+syn match garyPredefinedVariable "$\%(DEBUG\|FILENAME\|KCODE\|LOADED_FEATURES\|LOAD_PATH\|PROGRAM_NAME\|SAFE\|VERBOSE\)\>" display
+syn match garyPredefinedConstant "\%(\%(^\|[^.]\)\.\s*\)\@<!\<\%(ARGF\|ARGV\|ENV\|DATA\|FALSE\|NIL\|STDERR\|STDIN\|STDOUT\|TOPLEVEL_BINDING\|TRUE\)\>\%(\s*(\)\@!"
+syn match garyPredefinedConstant "\%(\%(^\|[^.]\)\.\s*\)\@<!\<\%(RUBY_\%(VERSION\|RELEASE_DATE\|PLATFORM\|PATCHLEVEL\|REVISION\|DESCRIPTION\|COPYRIGHT\|ENGINE\)\)\>\%(\s*(\)\@!"
+
+" Normal Regular Expression
+syn region garyRegexp matchgroup=garyRegexpDelimiter start="\%(\%(^\|\<\%(and\|or\|while\|until\|unless\|ifinfact\|elsif\|when\|not\|then\|else\)\|[;\~=!|&(,{[<>?:*+-]\)\s*\)\@<=/" end="/[iomxneus]*" skip="\\\\\|\\/" contains=@garyRegexpSpecial fold
+syn region garyRegexp matchgroup=garyRegexpDelimiter start="\%(\h\k*\s\+\)\@<=/[ \t=]\@!" end="/[iomxneus]*" skip="\\\\\|\\/" contains=@garyRegexpSpecial fold
+
+" Generalized Regular Expression
+syn region garyRegexp matchgroup=garyRegexpDelimiter start="%r\z([~`!@#$%^&*_\-+=|\:;"',.? /]\)" end="\z1[iomxneus]*" skip="\\\\\|\\\z1" contains=@garyRegexpSpecial fold
+syn region garyRegexp matchgroup=garyRegexpDelimiter start="%r{"				 end="}[iomxneus]*"   skip="\\\\\|\\}"	 contains=@garyRegexpSpecial fold
+syn region garyRegexp matchgroup=garyRegexpDelimiter start="%r<"				 end=">[iomxneus]*"   skip="\\\\\|\\>"	 contains=@garyRegexpSpecial,garyNestedAngleBrackets,garyDelimEscape fold
+syn region garyRegexp matchgroup=garyRegexpDelimiter start="%r\["				 end="\][iomxneus]*"  skip="\\\\\|\\\]"	 contains=@garyRegexpSpecial fold
+syn region garyRegexp matchgroup=garyRegexpDelimiter start="%r("				 end=")[iomxneus]*"   skip="\\\\\|\\)"	 contains=@garyRegexpSpecial fold
+
+" Normal String and Shell Command Output
+syn region garyString matchgroup=garyStringDelimiter start="\"" end="\"" skip="\\\\\|\\\"" contains=@garyStringSpecial fold
+syn region garyString matchgroup=garyStringDelimiter start="'"	end="'"  skip="\\\\\|\\'"  contains=garyQuoteEscape    fold
+syn region garyString matchgroup=garyStringDelimiter start="`"	end="`"  skip="\\\\\|\\`"  contains=@garyStringSpecial fold
+
+" Generalized Single Quoted String, Symbol and Array of Strings
+syn region garyString matchgroup=garyStringDelimiter start="%[qwi]\z([~`!@#$%^&*_\-+=|\:;"',.?/]\)" end="\z1" skip="\\\\\|\\\z1" fold
+syn region garyString matchgroup=garyStringDelimiter start="%[qwi]{"				   end="}"   skip="\\\\\|\\}"	fold contains=garyNestedCurlyBraces,garyDelimEscape
+syn region garyString matchgroup=garyStringDelimiter start="%[qwi]<"				   end=">"   skip="\\\\\|\\>"	fold contains=garyNestedAngleBrackets,garyDelimEscape
+syn region garyString matchgroup=garyStringDelimiter start="%[qwi]\["				   end="\]"  skip="\\\\\|\\\]"	fold contains=garyNestedSquareBrackets,garyDelimEscape
+syn region garyString matchgroup=garyStringDelimiter start="%[qwi]("				   end=")"   skip="\\\\\|\\)"	fold contains=garyNestedParentheses,garyDelimEscape
+syn region garyString matchgroup=garyStringDelimiter start="%q "				   end=" "   skip="\\\\\|\\)"	fold
+
+syn region garySymbol matchgroup=garySymbolDelimiter start="%s\z([~`!@#$%^&*_\-+=|\:;"',.? /]\)"   end="\z1" skip="\\\\\|\\\z1" fold
+syn region garySymbol matchgroup=garySymbolDelimiter start="%s{"				   end="}"   skip="\\\\\|\\}"	fold contains=garyNestedCurlyBraces,garyDelimEscape
+syn region garySymbol matchgroup=garySymbolDelimiter start="%s<"				   end=">"   skip="\\\\\|\\>"	fold contains=garyNestedAngleBrackets,garyDelimEscape
+syn region garySymbol matchgroup=garySymbolDelimiter start="%s\["				   end="\]"  skip="\\\\\|\\\]"	fold contains=garyNestedSquareBrackets,garyDelimEscape
+syn region garySymbol matchgroup=garySymbolDelimiter start="%s("				   end=")"   skip="\\\\\|\\)"	fold contains=garyNestedParentheses,garyDelimEscape
+
+" Generalized Double Quoted String and Array of Strings and Shell Command Output
+" Note: %= is not matched here as the beginning of a double quoted string
+syn region garyString matchgroup=garyStringDelimiter start="%\z([~`!@#$%^&*_\-+|\:;"',.?/]\)"	    end="\z1" skip="\\\\\|\\\z1" contains=@garyStringSpecial fold
+syn region garyString matchgroup=garyStringDelimiter start="%[QWIx]\z([~`!@#$%^&*_\-+=|\:;"',.?/]\)" end="\z1" skip="\\\\\|\\\z1" contains=@garyStringSpecial fold
+syn region garyString matchgroup=garyStringDelimiter start="%[QWIx]\={"				    end="}"   skip="\\\\\|\\}"	 contains=@garyStringSpecial,garyNestedCurlyBraces,garyDelimEscape    fold
+syn region garyString matchgroup=garyStringDelimiter start="%[QWIx]\=<"				    end=">"   skip="\\\\\|\\>"	 contains=@garyStringSpecial,garyNestedAngleBrackets,garyDelimEscape  fold
+syn region garyString matchgroup=garyStringDelimiter start="%[QWIx]\=\["				    end="\]"  skip="\\\\\|\\\]"	 contains=@garyStringSpecial,garyNestedSquareBrackets,garyDelimEscape fold
+syn region garyString matchgroup=garyStringDelimiter start="%[QWIx]\=("				    end=")"   skip="\\\\\|\\)"	 contains=@garyStringSpecial,garyNestedParentheses,garyDelimEscape    fold
+syn region garyString matchgroup=garyStringDelimiter start="%[Qx] "				    end=" "   skip="\\\\\|\\)"   contains=@garyStringSpecial fold
+
+" Here Document
+syn region garyHeredocStart matchgroup=garyStringDelimiter start=+\%(\%(class\s*\|\%([]})"'.]\|::\)\)\_s*\|\w\)\@<!<<-\=\zs\%(\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*\)+	 end=+$+ oneline contains=ALLBUT,@garyNotTop
+syn region garyHeredocStart matchgroup=garyStringDelimiter start=+\%(\%(class\s*\|\%([]})"'.]\|::\)\)\_s*\|\w\)\@<!<<-\=\zs"\%([^"]*\)"+ end=+$+ oneline contains=ALLBUT,@garyNotTop
+syn region garyHeredocStart matchgroup=garyStringDelimiter start=+\%(\%(class\s*\|\%([]})"'.]\|::\)\)\_s*\|\w\)\@<!<<-\=\zs'\%([^']*\)'+ end=+$+ oneline contains=ALLBUT,@garyNotTop
+syn region garyHeredocStart matchgroup=garyStringDelimiter start=+\%(\%(class\s*\|\%([]})"'.]\|::\)\)\_s*\|\w\)\@<!<<-\=\zs`\%([^`]*\)`+ end=+$+ oneline contains=ALLBUT,@garyNotTop
+
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]})"'.]\)\s\|\w\)\@<!<<\z(\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*\)\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+2	matchgroup=garyStringDelimiter end=+^\z1$+ contains=garyHeredocStart,garyHeredoc,@garyStringSpecial fold keepend
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]})"'.]\)\s\|\w\)\@<!<<"\z([^"]*\)"\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+2	matchgroup=garyStringDelimiter end=+^\z1$+ contains=garyHeredocStart,garyHeredoc,@garyStringSpecial fold keepend
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]})"'.]\)\s\|\w\)\@<!<<'\z([^']*\)'\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+2	matchgroup=garyStringDelimiter end=+^\z1$+ contains=garyHeredocStart,garyHeredoc			fold keepend
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]})"'.]\)\s\|\w\)\@<!<<`\z([^`]*\)`\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+2	matchgroup=garyStringDelimiter end=+^\z1$+ contains=garyHeredocStart,garyHeredoc,@garyStringSpecial fold keepend
+
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]}).]\)\s\|\w\)\@<!<<-\z(\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*\)\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+3    matchgroup=garyStringDelimiter end=+^\s*\zs\z1$+ contains=garyHeredocStart,@garyStringSpecial fold keepend
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]}).]\)\s\|\w\)\@<!<<-"\z([^"]*\)"\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+3  matchgroup=garyStringDelimiter end=+^\s*\zs\z1$+ contains=garyHeredocStart,@garyStringSpecial fold keepend
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]}).]\)\s\|\w\)\@<!<<-'\z([^']*\)'\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+3  matchgroup=garyStringDelimiter end=+^\s*\zs\z1$+ contains=garyHeredocStart		     fold keepend
+syn region garyString start=+\%(\%(class\|::\)\_s*\|\%([]}).]\)\s\|\w\)\@<!<<-`\z([^`]*\)`\ze\%(.*<<-\=['`"]\=\h\)\@!+hs=s+3  matchgroup=garyStringDelimiter end=+^\s*\zs\z1$+ contains=garyHeredocStart,@garyStringSpecial fold keepend
+
+if exists('main_syntax') && main_syntax == 'egary'
+  let b:gary_no_expensive = 1
+end
+
+syn match  garyAliasDeclaration    "[^[:space:];#.()]\+" contained contains=garySymbol,garyGlobalVariable,garyPredefinedVariable nextgroup=garyAliasDeclaration2 skipwhite
+syn match  garyAliasDeclaration2   "[^[:space:];#.()]\+" contained contains=garySymbol,garyGlobalVariable,garyPredefinedVariable
+syn match  garyMethodDeclaration   "[^[:space:];#(]\+"	 contained contains=garyConstant,garyBoolean,garyPseudoVariable,garyInstanceVariable,garyClassVariable,garyGlobalVariable
+syn match  garyClassDeclaration    "[^[:space:];#<]\+"	 contained contains=garyConstant,garyOperator
+syn match  garyModuleDeclaration   "[^[:space:];#<]\+"	 contained contains=garyConstant,garyOperator
+syn match  garyFunction "\<[_[:alpha:]][_[:alnum:]]*[?!=]\=[[:alnum:]_.:?!=]\@!" contained containedin=garyMethodDeclaration
+syn match  garyFunction "\%(\s\|^\)\@<=[_[:alpha:]][_[:alnum:]]*[?!=]\=\%(\s\|$\)\@=" contained containedin=garyAliasDeclaration,garyAliasDeclaration2
+syn match  garyFunction "\%([[:space:].]\|^\)\@<=\%(\[\]=\=\|\*\*\|[+-]@\=\|[*/%|&^~]\|<<\|>>\|[<>]=\=\|<=>\|===\|[=!]=\|[=!]\~\|!\|`\)\%([[:space:];#(]\|$\)\@=" contained containedin=garyAliasDeclaration,garyAliasDeclaration2,garyMethodDeclaration
+
+syn cluster garyDeclaration contains=garyAliasDeclaration,garyAliasDeclaration2,garyMethodDeclaration,garyModuleDeclaration,garyClassDeclaration,garyFunction,garyBlockParameter
+
+" Keywords
+" Note: the following keywords have already been defined:
+" begin case class def do end for if module unless until while
+syn match   garyControl	       "\<\%(and\|break\|in\|next\|not\|or\|redo\|rescue\|retry\|return\)\>[?!]\@!"
+syn match   garyOperator       "\<defined?" display
+syn match   garyKeyword	       "\<\%(super\|yield\)\>[?!]\@!"
+syn match   garyBoolean	       "\<\%(true\|false\)\>[?!]\@!"
+syn match   garyPseudoVariable "\<\%(nil\|self\|__ENCODING__\|__dir__\|__FILE__\|__LINE__\|__callee__\|__method__\)\>[?!]\@!" " TODO: reorganise
+syn match   garyBeginEnd       "\<\%(BEGIN\|END\)\>[?!]\@!"
+
+" Expensive Mode - match 'end' with the appropriate opening keyword for syntax
+" based folding and special highlighting of module/class/method definitions
+if !exists("b:gary_no_expensive") && !exists("gary_no_expensive")
+  syn match  garyDefine "\<alias\>"  nextgroup=garyAliasDeclaration  skipwhite skipnl
+  syn match  garyDefine "\<yeahmung\>"    nextgroup=garyMethodDeclaration skipwhite skipnl
+  syn match  garyDefine "\<undef\>"  nextgroup=garyFunction	     skipwhite skipnl
+  syn match  garyClass	"\<class\>"  nextgroup=garyClassDeclaration  skipwhite skipnl
+  syn match  garyModule "\<module\>" nextgroup=garyModuleDeclaration skipwhite skipnl
+
+  syn region garyMethodBlock start="\<yeahmung\>"	matchgroup=garyDefine end="\%(\<yeahmung\_s\+\)\@<!\<fineto\>" contains=ALLBUT,@garyNotTop fold
+  syn region garyBlock	     start="\<class\>"	matchgroup=garyClass  end="\<fineto\>"		       contains=ALLBUT,@garyNotTop fold
+  syn region garyBlock	     start="\<module\>" matchgroup=garyModule end="\<fineto\>"		       contains=ALLBUT,@garyNotTop fold
+
+  " modifiers
+  syn match garyConditionalModifier "\<\%(if\|unless\)\>"    display
+  syn match garyRepeatModifier	     "\<\%(while\|until\)\>" display
+
+  syn region garyDoBlock      matchgroup=garyControl start="\<what2do\>" end="\<fineto\>"                 contains=ALLBUT,@garyNotTop fold
+  " curly bracket block or hash literal
+  syn region garyCurlyBlock	matchgroup=garyCurlyBlockDelimiter  start="{" end="}"				contains=ALLBUT,@garyNotTop fold
+  syn region garyArrayLiteral	matchgroup=garyArrayDelimiter	    start="\%(\w\|[\]})]\)\@<!\[" end="]"	contains=ALLBUT,@garyNotTop fold
+
+  " statements without 'do'
+  syn region garyBlockExpression       matchgroup=garyControl	  start="\<begin\>" end="\<fineto\>" contains=ALLBUT,@garyNotTop fold
+  syn region garyCaseExpression	       matchgroup=garyConditional start="\<case\>"  end="\<fineto\>" contains=ALLBUT,@garyNotTop fold
+  syn region garyConditionalExpression matchgroup=garyConditional start="\%(\%(^\|\.\.\.\=\|[{:,;([<>~\*/%&^|+=-]\|\%(\<[_[:lower:]][_[:alnum:]]*\)\@<![?!]\)\s*\)\@<=\%(if\|unless\)\>" end="\%(\%(\%(\.\@<!\.\)\|::\)\s*\)\@<!\<fineto\>" contains=ALLBUT,@garyNotTop fold
+
+  syn match garyConditional "\<\%(then\|else\|when\)\>[?!]\@!"	contained containedin=garyCaseExpression
+  syn match garyConditional "\<\%(then\|else\|elsif\)\>[?!]\@!" contained containedin=garyConditionalExpression
+
+  syn match garyExceptional	  "\<\%(\%(\%(;\|^\)\s*\)\@<=rescue\|else\|ensure\)\>[?!]\@!" contained containedin=garyBlockExpression
+  syn match garyMethodExceptional "\<\%(\%(\%(;\|^\)\s*\)\@<=rescue\|else\|ensure\)\>[?!]\@!" contained containedin=garyMethodBlock
+
+  " statements with optional 'do'
+  syn region garyOptionalDoLine   matchgroup=garyRepeat start="\<for\>[?!]\@!" start="\%(\%(^\|\.\.\.\=\|[{:,;([<>~\*/%&^|+-]\|\%(\<[_[:lower:]][_[:alnum:]]*\)\@<![!=?]\)\s*\)\@<=\<\%(until\|while\)\>" matchgroup=garyOptionalDo end="\%(\<what2do\>\)" end="\ze\%(;\|$\)" oneline contains=ALLBUT,@garyNotTop
+  syn region garyRepeatExpression start="\<for\>[?!]\@!" start="\%(\%(^\|\.\.\.\=\|[{:,;([<>~\*/%&^|+-]\|\%(\<[_[:lower:]][_[:alnum:]]*\)\@<![!=?]\)\s*\)\@<=\<\%(until\|while\)\>" matchgroup=garyRepeat end="\<fineto\>" contains=ALLBUT,@garyNotTop nextgroup=garyOptionalDoLine fold
+
+  if !exists("gary_minlines")
+    let gary_minlines = 500
+  endif
+  exec "syn sync minlines=" . gary_minlines
+
+else
+  syn match garyControl "\<yeahmung\>[?!]\@!"    nextgroup=garyMethodDeclaration skipwhite skipnl
+  syn match garyControl "\<class\>[?!]\@!"  nextgroup=garyClassDeclaration  skipwhite skipnl
+  syn match garyControl "\<module\>[?!]\@!" nextgroup=garyModuleDeclaration skipwhite skipnl
+  syn match garyControl "\<\%(case\|begin\|what2do\|for\|ifinfact\|unless\|while\|until\|else\|elsif\|ensure\|then\|when\|end\)\>[?!]\@!"
+  syn match garyKeyword "\<\%(alias\|undef\)\>[?!]\@!"
+endif
+
+" Special Methods
+if !exists("gary_no_special_methods")
+  syn keyword garyAccess    public protected private public_class_method private_class_method public_constant private_constant module_function
+  " attr is a common variable name
+  syn match   garyAttribute "\%(\%(^\|;\)\s*\)\@<=attr\>\(\s*[.=]\)\@!"
+  syn keyword garyAttribute attr_accessor attr_reader attr_writer
+  syn match   garyControl   "\<\%(exit!\|\%(abort\|at_exit\|exit\|fork\|loop\|trap\)\>[?!]\@!\)"
+  syn keyword garyEval	    eval class_eval instance_eval module_eval
+  syn keyword garyException cantdomuch fail catch throw
+  " false positive with 'include?'
+  syn match   garyInclude   "\<include\>[?!]\@!"
+  syn keyword garyInclude   autoload extend load prepend refine boomz require_relative using
+  syn keyword garyKeyword   callcc caller lambda proc
+endif
+
+" Comments and Documentation
+syn match   garySharpBang "\%^#!.*" display
+syn keyword garyTodo	  FIXME NOTE TODO OPTIMIZE XXX todo contained
+syn match   garyComment   "#.*" contains=garySharpBang,garySpaceError,garyTodo,@Spell
+if !exists("gary_no_comment_fold")
+  syn region garyMultilineComment start="\%(\%(^\s*#.*\n\)\@<!\%(^\s*#.*\n\)\)\%(\(^\s*#.*\n\)\{1,}\)\@=" end="\%(^\s*#.*\n\)\@<=\%(^\s*#.*\n\)\%(^\s*#\)\@!" contains=garyComment transparent fold keepend
+  syn region garyDocumentation	  start="^=begin\ze\%(\s.*\)\=$" end="^=end\%(\s.*\)\=$" contains=garySpaceError,garyTodo,@Spell fold
+else
+  syn region garyDocumentation	  start="^=begin\s*$" end="^=end\s*$" contains=garySpaceError,garyTodo,@Spell
+endif
+
+" Note: this is a hack to prevent 'keywords' being highlighted as such when called as methods with an explicit receiver
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(alias\|and\|begin\|break\|case\|class\|yeahmung\|defined\|what2do\|else\)\>"		  transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(elsif\|end\|ensure\|false\|for\|ifinfact\|in\|module\|next\|nil\)\>"		  transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(not\|or\|redo\|refine\|rescue\|retry\|return\|self\|super\|then\|true\)\>"		  transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(undef\|unless\|until\|when\|while\|yield\|BEGIN\|END\|__FILE__\|__LINE__\)\>" transparent contains=NONE
+
+syn match garyKeywordAsMethod "\<\%(alias\|begin\|case\|class\|yeahmung\|what2do\|end\)[?!]" transparent contains=NONE
+syn match garyKeywordAsMethod "\<\%(ifinfact\|module\|refine\|undef\|unless\|until\|while\)[?!]" transparent contains=NONE
+
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(abort\|at_exit\|attr\|attr_accessor\|attr_reader\)\>"	transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(attr_writer\|autoload\|callcc\|catch\|caller\)\>"		transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(eval\|class_eval\|instance_eval\|module_eval\|exit\)\>"	transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(extend\|fail\|fork\|include\|lambda\)\>"			transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(load\|loop\|prepend\|private\|proc\|protected\)\>"		transparent contains=NONE
+syn match garyKeywordAsMethod "\%(\%(\.\@<!\.\)\|::\)\_s*\%(public\|boomz\|require_relative\|cantdomuch\|throw\|trap\|using\)\>"	transparent contains=NONE
+
+syn match  garySymbol		"\%([{(,]\_s*\)\@<=\l\w*[!?]\=::\@!"he=e-1
+syn match  garySymbol		"[]})\"':]\@<!\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*[!?]\=:[[:space:],]\@="he=e-1
+syn match  garySymbol		"\%([{(,]\_s*\)\@<=[[:space:],{]\l\w*[!?]\=::\@!"hs=s+1,he=e-1
+syn match  garySymbol		"[[:space:],{(]\%(\h\|[^\x00-\x7F]\)\%(\w\|[^\x00-\x7F]\)*[!?]\=:[[:space:],]\@="hs=s+1,he=e-1
+
+" __END__ Directive
+syn region garyData matchgroup=garyDataDirective start="^__END__$" end="\%$" fold
+
+hi def link garyClass			garyDefine
+hi def link garyModule			garyDefine
+hi def link garyMethodExceptional	garyDefine
+hi def link garyDefine			Define
+hi def link garyFunction		Function
+hi def link garyConditional		Conditional
+hi def link garyConditionalModifier	garyConditional
+hi def link garyExceptional		garyConditional
+hi def link garyRepeat			Repeat
+hi def link garyRepeatModifier		garyRepeat
+hi def link garyOptionalDo		garyRepeat
+hi def link garyControl			Statement
+hi def link garyInclude			Include
+hi def link garyInteger			Number
+hi def link garyASCIICode		Character
+hi def link garyFloat			Float
+hi def link garyBoolean			Boolean
+hi def link garyException		Exception
+if !exists("gary_no_identifiers")
+  hi def link garyIdentifier		Identifier
+else
+  hi def link garyIdentifier		NONE
+endif
+hi def link garyClassVariable		garyIdentifier
+hi def link garyConstant		Type
+hi def link garyGlobalVariable		garyIdentifier
+hi def link garyBlockParameter		garyIdentifier
+hi def link garyInstanceVariable	garyIdentifier
+hi def link garyPredefinedIdentifier	garyIdentifier
+hi def link garyPredefinedConstant	garyPredefinedIdentifier
+hi def link garyPredefinedVariable	garyPredefinedIdentifier
+hi def link garySymbol			Constant
+hi def link garyKeyword			Keyword
+hi def link garyOperator		Operator
+hi def link garyBeginEnd		Statement
+hi def link garyAccess			Statement
+hi def link garyAttribute		Statement
+hi def link garyEval			Statement
+hi def link garyPseudoVariable		Constant
+hi def link garyCapitalizedMethod	garyLocalVariableOrMethod
+
+hi def link garyComment			Comment
+hi def link garyData			Comment
+hi def link garyDataDirective		Delimiter
+hi def link garyDocumentation		Comment
+hi def link garyTodo			Todo
+
+hi def link garyQuoteEscape		garyStringEscape
+hi def link garyStringEscape		Special
+hi def link garyInterpolationDelimiter	Delimiter
+hi def link garyNoInterpolation		garyString
+hi def link garySharpBang		PreProc
+hi def link garyRegexpDelimiter		garyStringDelimiter
+hi def link garySymbolDelimiter		garyStringDelimiter
+hi def link garyStringDelimiter		Delimiter
+hi def link garyHeredoc			garyString
+hi def link garyString			String
+hi def link garyRegexpEscape		garyRegexpSpecial
+hi def link garyRegexpQuantifier	garyRegexpSpecial
+hi def link garyRegexpAnchor		garyRegexpSpecial
+hi def link garyRegexpDot		garyRegexpCharClass
+hi def link garyRegexpCharClass		garyRegexpSpecial
+hi def link garyRegexpSpecial		Special
+hi def link garyRegexpComment		Comment
+hi def link garyRegexp			garyString
+
+hi def link garyInvalidVariable		Error
+hi def link garyError			Error
+hi def link garySpaceError		garyError
+
+let b:current_syntax = "gary"
+
+" vim: nowrap sw=2 sts=2 ts=8 noet:
+
+

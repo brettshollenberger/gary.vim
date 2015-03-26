@@ -1,0 +1,8 @@
+function! s:setf(filetype) abort
+  if &filetype !=# a:filetype
+    let &filetype = a:filetype
+  endif
+  setlocal ts=2 sts=2
+endfunction
+
+au BufNewFile,BufRead *.gary call s:setf('gary')
